@@ -5,6 +5,9 @@ LDFLAGS=-lguac -lguacd -lwsock32
 
 all: bin/ball.exe
 
+clean:
+	$(RM) *.o
+
 daemon.o: daemon.c
 	$(CC) $(CFLAGS) -c daemon.c
 
