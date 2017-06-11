@@ -8,9 +8,9 @@ all: bin/ball.exe
 clean:
 	$(RM) *.o
 
-daemon.o: daemon.c
-	$(CC) $(CFLAGS) -c daemon.c
+main.o: main.c
+	$(CC) $(CFLAGS) -c main.c
 
-bin/ball.exe: daemon.o
-	$(CC) daemon.o $(LDFLAGS) -o bin/ball.exe
+bin/ball.exe: main.o
+	$(CC) main.o $(LDFLAGS) -o bin/ball.exe
 
