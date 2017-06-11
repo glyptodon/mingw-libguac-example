@@ -1,6 +1,6 @@
 
 CC=i686-w64-mingw32-gcc
-CFLAGS=
+CFLAGS=-Werror
 LDFLAGS=-lguac -lguacd -lwsock32
 
 all: bin/ball.exe ball.zip
