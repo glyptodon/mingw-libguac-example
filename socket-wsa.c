@@ -92,7 +92,7 @@ ssize_t guac_socket_wsa_write(guac_socket* socket,
     /* Write until completely written */
     while (count > 0) {
 
-        int retval = send(data->sock, buf, count, 0);
+        int retval = send(data->sock, buffer, count, 0);
 
         /* Record errors in guac_error */
         if (retval < 0) {
