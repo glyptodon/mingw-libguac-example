@@ -322,29 +322,37 @@ static int guac_socket_wsa_select_handler(guac_socket* socket,
 
     guac_socket_wsa_data* data = (guac_socket_wsa_data*) socket->data;
 
+    fd_set sockets;
+    struct timeval timeout;
     int retval;
+
+    /* Initialize fd_set with single underlying file descriptor */
+    FD_ZERO(&sockets);
+    FD_SET(data->sock, &sockets);
 
     /* No timeout if usec_timeout is negative */
     if (usec_timeout < 0)
-        retval = WaitForSingleObject((HANDLE) data->sock, INFINITE);
+        retval = select(0, &sockets, NULL, NULL, NULL);
 
     /* Handle timeout if specified */
-    else
-        retval = WaitForSingleObject((HANDLE) data->sock, (usec_timeout + 999) / 1000);
-
-    if (retval == WAIT_TIMEOUT) {
-        guac_error = GUAC_STATUS_TIMEOUT;
-        guac_error_message = "Timeout while waiting for data on socket";
-        return 0;
+    else {
+        timeout.tv_sec  = usec_timeout / 1000000;
+        timeout.tv_usec = usec_timeout % 1000000;
+        retval = select(0, &sockets, NULL, NULL, &timeout);
     }
 
-    else if (retval == WAIT_FAILED) {
+    /* Properly set guac_error */
+    if (retval <  0) {
         guac_error = GUAC_STATUS_SEE_ERRNO;
         guac_error_message = "Error while waiting for data on socket";
-        return -1;
     }
 
-    return 1;
+    if (retval == 0) {
+        guac_error = GUAC_STATUS_TIMEOUT;
+        guac_error_message = "Timeout while waiting for data on socket";
+    }
+
+    return retval;
 
 }
 
