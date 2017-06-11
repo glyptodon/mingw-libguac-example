@@ -1,14 +1,26 @@
 
 #include <guacamole/client.h>
+#include <guacamole/error.h>
 #include <guacamole/socket.h>
+#include <guacamole/user.h>
+#include <libguacd/user.h>
 
+#include <fcntl.h>
 #include <stdio.h>
+#include <errno.h>
 #include <winsock2.h>
+
+#include "ball.h"
+#include "socket-wsa.h"
 
 int main(int argc, char** argv) {
 
     WSADATA wsa;
     SOCKET sock;
+
+    printf("Initializing ball client...\n");
+    guac_client* client = guac_client_alloc();
+    guac_client_init(client);
 
     struct sockaddr_in addr;
 
@@ -49,15 +61,52 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    guac_socket* socket = guac_socket_open(connection);
+    printf("Accepted connection. Waiting for select...\n");
 
-    guac_client* client = guac_client_alloc();
-    guac_client_free(client);
+    guac_socket* socket = guac_socket_open_wsa(connection);
+    guac_parser* parser = guac_parser_alloc();
 
+    /* Wait for select */
+    if (guac_parser_expect(parser, socket, 15000000, "select")) {
+        printf("\"select\" not read: %s %d\n", guac_error_message, WSAGetLastError());
+        return 1;
+    }
+
+    /* Validate select length */
+    if (parser->argc != 1) {
+        printf("\"select\" had wrong number of arguments.\n");
+        return 1;
+    }
+
+    /* Validate contents of "select */
+    const char* identifier = parser->argv[0];
+    if (strcmp(identifier, "ball") == 0)
+        printf("\"ball\" selected!\n");
+    else if (strcmp(identifier, client->connection_id) == 0)
+        printf("Joining existing.\n");
+    else {
+        printf("Invalid protocol or connection ID.\n");
+        return 1;
+    }
+
+    /* Init user */
+    guac_user* user = guac_user_alloc();
+    user->client = client;
+    user->socket = socket;
+
+    /* Start and wait for user */
+    guacd_handle_user(user);
+
+    /* User done */
+    guac_user_free(user);
+    guac_parser_free(parser);
     guac_socket_free(socket);
 
+    /* Client done */
+    guac_client_free(client);
     printf("Done!\n");
 
+    /* Daemon done */
     closesocket(sock);
     WSACleanup();
 
