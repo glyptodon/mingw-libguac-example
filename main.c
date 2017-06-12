@@ -2,6 +2,7 @@
 #include <guacamole/client.h>
 #include <guacamole/error.h>
 #include <guacamole/socket.h>
+#include <guacamole/socket-wsa.h>
 #include <guacamole/user.h>
 #include <libguacd/user.h>
 
@@ -11,7 +12,6 @@
 #include <winsock2.h>
 
 #include "ball.h"
-#include "socket-wsa.h"
 
 int main(int argc, char** argv) {
 
