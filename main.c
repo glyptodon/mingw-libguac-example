@@ -1,10 +1,10 @@
 
 #include <guacamole/client.h>
 #include <guacamole/error.h>
+#include <guacamole/parser.h>
 #include <guacamole/socket.h>
 #include <guacamole/socket-wsa.h>
 #include <guacamole/user.h>
-#include <libguacd/user.h>
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
     user->socket = socket;
 
     /* Start and wait for user */
-    guacd_handle_user(user);
+    guac_user_handle_connection(user, 15000000);
 
     /* User done */
     guac_user_free(user);
