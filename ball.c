@@ -9,23 +9,66 @@
 #include <stdlib.h>
 #include <windows.h>
 
-/* Client plugin arguments (empty) */
-const char* TUTORIAL_ARGS[] = { NULL };
+/**
+ * The arguments accepted by the ball "client" during the Guacamole protocol
+ * handshake. In this case, no arguments are accepted.
+ */
+const char* BALL_ARGS[] = { NULL };
 
+/**
+ * The internal state of the ball "client".
+ */
 typedef struct ball_client_data {
 
+    /**
+     * The Guacamole layer containing the bouncing ball.
+     */
     guac_layer* ball;
 
+    /**
+     * The current X position of the upper-left corner of the bouncing ball, in
+     * pixels.
+     */
     int ball_x;
+
+    /**
+     * The current Y position of the upper-left corner of the bouncing ball, in
+     * pixels.
+     */
     int ball_y;
 
+    /**
+     * The current X velocity of the bouncing ball, in pixels per second.
+     */
     int ball_velocity_x;
+
+    /**
+     * The current Y velocity of the bouncing ball, in pixels per second.
+     */
     int ball_velocity_y;
 
+    /**
+     * A reference to the running thread which is periodically updating the
+     * ball position, velocity, and sending the necessary Guacamole protocol
+     * instructions to update the display of each connected user.
+     */
     HANDLE render_thread;
 
 } ball_client_data;
 
+/**
+ * The ball "client" rendering thread. This function runs in the background
+ * once guac_client_init() has been invoked, periodically updating the location
+ * of the ball, its velocity, etc., sending Guacamole protocol instructions to
+ * any connected users to update their display state to match.
+ *
+ * @param arg
+ *     A pointer to the guac_client instance associated with the running ball
+ *     "client".
+ *
+ * @returns
+ *     Always zero.
+ */
 DWORD WINAPI ball_render_thread(LPVOID arg) {
 
     /* Get data */
@@ -92,7 +135,31 @@ DWORD WINAPI ball_render_thread(LPVOID arg) {
 
 }
 
-int ball_join_handler(guac_user* user, int argc, char** argv) {
+/**
+ * Invoked when a new user joins the connection. In the case of this example,
+ * which accepts only one user, this function will only ever be invoked once.
+ * It is the responsibility of this function to synchronize the display state
+ * of the new user (such that any incremental updates sent through the
+ * guac_client will have the expected effect), and to assign any user-level
+ * handlers for input events, etc.
+ *
+ * @param user
+ *     The guac_user that has joined the connection.
+ *
+ * @param argc
+ *     The number of arguments within the argv array, provided by the user as
+ *     part of the Guacamole protocol handshake. As the ball "client" does not
+ *     declare any arguments, this should always be zero.
+ *
+ * @param argv
+ *     All arguments provided by the user as part of the Guacamole protocol
+ *     handshake.
+ *
+ * @returns
+ *     Zero if the user was successfully joined to the connection, non-zero
+ *     otherwise.
+ */
+static int ball_join_handler(guac_user* user, int argc, char** argv) {
 
     /* Get client associated with user */
     guac_client* client = user->client;
@@ -165,7 +232,19 @@ int ball_join_handler(guac_user* user, int argc, char** argv) {
 
 }
 
-int ball_free_handler(guac_client* client) {
+/**
+ * Invoked when the associated guac_client is being freed, and any underlying
+ * resources must also be freed. This function will automatically be invoked
+ * when guac_client_free() is called.
+ *
+ * @param client
+ *     The guac_client being freed.
+ *
+ * @returns
+ *     Zero if the resources underlying the given guac_client were successfully
+ *     released, non-zero otherwise.
+ */
+static int ball_free_handler(guac_client* client) {
 
     ball_client_data* data = (ball_client_data*) client->data;
 
@@ -184,7 +263,7 @@ int ball_free_handler(guac_client* client) {
 
 }
 
-int guac_client_init(guac_client* client) {
+void guac_client_init(guac_client* client) {
 
     /* Allocate storage for client-specific data */
     ball_client_data* data = malloc(sizeof(ball_client_data));
@@ -208,13 +287,21 @@ int guac_client_init(guac_client* client) {
             client, 0, NULL);
 
     /* This example does not implement any arguments */
-    client->args = TUTORIAL_ARGS;
+    client->args = BALL_ARGS;
 
-    /* Client-level handlers */
+    /*
+     * Handler functions are used by Guacamole's C API for just about
+     * everything. In this case, we are only handling when a user joins the
+     * connection (in which case their display must be synchronized with the
+     * current display state) and when the client is being shut down (in which
+     * case resources must be freed).
+     *
+     * There are also user-level handler functions (on the guac_user object
+     * received by the client->join_handler) which deal with keyboard and
+     * mouse events, clipboard and file streams, changes in display size, etc.
+     */
     client->join_handler = ball_join_handler;
     client->free_handler = ball_free_handler;
-
-    return 0;
 
 }
 
