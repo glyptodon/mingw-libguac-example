@@ -6,8 +6,8 @@
 #include <guacamole/timestamp.h>
 #include <guacamole/user.h>
 
-#include <pthread.h>
 #include <stdlib.h>
+#include <windows.h>
 
 /* Client plugin arguments (empty) */
 const char* TUTORIAL_ARGS[] = { NULL };
@@ -22,11 +22,11 @@ typedef struct ball_client_data {
     int ball_velocity_x;
     int ball_velocity_y;
 
-    pthread_t render_thread;
+    HANDLE render_thread;
 
 } ball_client_data;
 
-void* ball_render_thread(void* arg) {
+DWORD WINAPI ball_render_thread(LPVOID arg) {
 
     /* Get data */
     guac_client* client = (guac_client*) arg;
@@ -88,7 +88,7 @@ void* ball_render_thread(void* arg) {
 
     }
 
-    return NULL;
+    return 0;
 
 }
 
@@ -170,7 +170,8 @@ int ball_free_handler(guac_client* client) {
     ball_client_data* data = (ball_client_data*) client->data;
 
     /* Wait for render thread to terminate */
-    pthread_join(data->render_thread, NULL);
+    WaitForSingleObject(data->render_thread, INFINITE);
+    CloseHandle(data->render_thread);
 
     /* Free client-level ball layer */
     guac_client_free_layer(client, data->ball);
@@ -203,7 +204,8 @@ int guac_client_init(guac_client* client) {
     data->ball_velocity_y = 200; /* pixels per second */
 
     /* Start render thread */
-    pthread_create(&data->render_thread, NULL, ball_render_thread, client);
+    data->render_thread = CreateThread(NULL, 0, ball_render_thread,
+            client, 0, NULL);
 
     /* This example does not implement any arguments */
     client->args = TUTORIAL_ARGS;
