@@ -98,9 +98,13 @@ int main(int argc, char** argv) {
     guac_user_handle_connection(user, 15000000);
 
     /* User done */
+    printf("User has left connection.\n");
     guac_user_free(user);
     guac_parser_free(parser);
     guac_socket_free(socket);
+
+    /* Signal client to shut down */
+    guac_client_stop(client);
 
     /* Client done */
     guac_client_free(client);
